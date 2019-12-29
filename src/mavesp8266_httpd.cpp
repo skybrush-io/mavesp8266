@@ -35,6 +35,8 @@
  * @author Gus Grubba <mavlink@grubba.com>
  */
 
+#include <ESP8266WebServer.h>
+
 #include "mavesp8266.h"
 #include "mavesp8266_component.h"
 #include "mavesp8266_httpd.h"
@@ -42,8 +44,6 @@
 #include "mavesp8266_gcs.h"
 #include "mavesp8266_vehicle.h"
 #include "mavesp8266_power_mgmt.h"
-
-#include <ESP8266WebServer.h>
 
 const char PROGMEM kTEXTPLAIN[]  = "text/plain";
 const char PROGMEM kTEXTHTML[]   = "text/html";
