@@ -87,10 +87,7 @@ class MavESP8266PowerMgmt;
 //-- Uncomment this to simulate heartbeats even when the FC is powered down
 // #define SIMULATE_HEARTBEATS_WHEN_POWERED_OFF
 
-//-- TODO: This needs to come from the build system
-#define MAVESP8266_VERSION_MAJOR    1
-#define MAVESP8266_VERSION_MINOR    2
-#define MAVESP8266_VERSION_BUILD    3
+//-- The version is set from the build system (major, minor and build)
 #define MAVESP8266_VERSION          ((MAVESP8266_VERSION_MAJOR << 24) & 0xFF00000) | ((MAVESP8266_VERSION_MINOR << 16) & 0x00FF0000) | (MAVESP8266_VERSION_BUILD & 0xFFFF)
 
 //-- Debug sent out to Serial1 (GPIO02), which is TX only (no RX).
