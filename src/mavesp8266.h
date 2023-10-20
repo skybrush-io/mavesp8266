@@ -38,17 +38,23 @@
 #ifndef MAVESP8266_H
 #define MAVESP8266_H
 
-#include <ESP8266WiFi.h>
+// -- Stores whether we are working with a supported ESP32 board or an ESP8266
+#if defined(PIO_BOARD_TYPE) && PIO_BOARD_TYPE == esp32
+#  define MAVESP8266_IS_ESP32 1
+#endif
+
 #include <WiFiClient.h>
 #include <WiFiUdp.h>
 
 #undef F
 #include <ardupilotmega/mavlink.h>
 
- extern "C" {
+#ifndef MAVESP8266_IS_ESP32
+extern "C" {
     // Espressif SDK
     #include "user_interface.h"
 }
+#endif
 
 class MavESP8266Parameters;
 class MavESP8266Component;

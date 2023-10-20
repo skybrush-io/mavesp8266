@@ -445,7 +445,7 @@ MavESP8266Component::_wifiReboot(MavESP8266Bridge* sender)
 {
     _sendStatusMessage(sender, MAV_SEVERITY_NOTICE, "Rebooting WiFi Bridge.");
     delay(50);
-    ESP.reset();
+    ESP.restart();
 }
 
 

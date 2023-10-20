@@ -43,7 +43,14 @@
 #include "mavesp8266_vehicle.h"
 #include "mavesp8266_power_mgmt.h"
 
-#include <ESP8266WebServer.h>
+#if MAVESP8266_IS_ESP32
+#  include <Update.h>
+#  include <WebServer.h>
+#  include <esp_spi_flash.h>
+#else
+#  include <ESP8266WebServer.h>
+#  define WebServer ESP8266WebServer
+#endif
 
 const char PROGMEM kTEXTPLAIN[]  = "text/plain";
 const char PROGMEM kTEXTHTML[]   = "text/html";
@@ -125,7 +132,7 @@ static char paramCRC[12] = {""};
 
 static void scheduleReboot(uint32_t delayMs);
 
-ESP8266WebServer    webServer(80);
+WebServer           webServer(80);
 MavESP8266Update*   updateCB    = NULL;
 bool                started     = false;
 
@@ -183,7 +190,12 @@ void handle_upload_status() {
         #ifdef DEBUG_SERIAL
             DEBUG_SERIAL.setDebugOutput(true);
         #endif
+
+#if MAVESP8266_IS_ESP32
+#else
         WiFiUDP::stopAll();
+#endif
+
         Serial.end();
         #ifdef DEBUG_SERIAL
             DEBUG_SERIAL.printf("Update: %s\n", upload.filename.c_str());
@@ -293,12 +305,12 @@ static void handle_setup()
 
     message += "WiFi Mode:&nbsp;";
     message += "<input type='radio' name='mode' value='0'";
-    if (getWorld()->getParameters()->getWifiMode() == WIFI_MODE_AP) {
+    if (getWorld()->getParameters()->getWifiMode() == MAVESP8266_WIFI_MODE_AP) {
         message += " checked";
     }
     message += ">AccessPoint\n";
     message += "<input type='radio' name='mode' value='1'";
-    if (getWorld()->getParameters()->getWifiMode() == WIFI_MODE_STA) {
+    if (getWorld()->getParameters()->getWifiMode() == MAVESP8266_WIFI_MODE_STA) {
         message += " checked";
     }
     message += ">Station<br>\n";
@@ -405,7 +417,11 @@ static void handle_getStatus()
     message += "</td></tr></tbody></table>";
     message += "<h2>System Status</h2><table><tbody>\n";
     message += "<tr><td width=\"420\">Flash Size</td><td>";
-    message += ESP.getFlashChipRealSize();
+#if MAVESP8266_IS_ESP32
+    message += String(spi_flash_get_chip_size());
+#else
+    message += String(ESP.getFlashChipRealSize());
+#endif
     message += "</td></tr>\n";
     message += "<tr><td>Flash Available</td><td>";
     message += flash;
@@ -462,7 +478,11 @@ void handle_getJSysInfo()
     if(!paramCRC[0]) {
         snprintf(paramCRC, sizeof(paramCRC), "%08X", getWorld()->getParameters()->paramHashCheck());
     }
+#ifdef MAVESP8266_IS_ESP32
+    uint32_t fid = 0;  /* TODO */
+#else
     uint32_t fid = spi_flash_get_id();
+#endif
     char message[512];
     snprintf(message, 512,
         "{ "
@@ -473,7 +493,11 @@ void handle_getJSysInfo()
         "\"logsize\": \"%u\", "
         "\"paramcrc\": \"%s\""
         " }",
+#ifdef MAVESP8266_IS_ESP32
+        ESP.getFlashChipSize(),
+#else
         kFlashMaps[system_get_flash_size_map()],
+#endif
         (long unsigned int)(fid & 0xff), (long unsigned int)((fid & 0xff00) | ((fid >> 16) & 0xff)),
         flash,
         ESP.getFreeHeap(),

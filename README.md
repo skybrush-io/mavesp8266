@@ -28,8 +28,12 @@ When you run ```platformio run``` for the first time, it will download the toolc
 ### Useful commands:
 
 * ```platformio run``` - process/build all targets
+* ```platformio run -e esp01_1m``` - process/build just the ESP-01 target
 * ```platformio run -e esp12e``` - process/build just the ESP12e target (the NodeMcu v2, Adafruit HUZZAH, etc.)
-* ```platformio run -e esp12e -t upload``` - build and upload firmware to embedded board
+* ```platformio run -e esp32-s3-devkitc-1``` - process/build the ESP32-S3 target (ESP32-S3-MINI-1 or ESP32-S3-MINI-1U)
+* ```platformio run -e esp32-wroom``` - process/build the ESP32-WROOM target
+* ```platformio run -e esp32feather``` - process/build the Adafruit ESP32 Feather target
+* ```platformio run -e ... -t upload``` - build and upload firmware to embedded board (use the board IDs from above)
 * ```platformio run -t clean``` - clean project (remove compiled files)
 
 The resulting image(s) can be found in the directory ```.pioenvs``` created during the build process.

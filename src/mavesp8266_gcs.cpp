@@ -40,6 +40,17 @@
 #include "mavesp8266_parameters.h"
 #include "mavesp8266_component.h"
 
+#if MAVESP8266_IS_ESP32
+#  include <WiFi.h>
+#else
+#  include <ESP8266WiFi.h>
+#endif
+
+//---------------------------------------------------------------------------------
+
+static void start_dhcp_server();
+static void stop_dhcp_server();
+
 //---------------------------------------------------------------------------------
 MavESP8266GCS::MavESP8266GCS()
     : _udp_port(DEFAULT_UDP_HPORT)
@@ -128,8 +139,8 @@ MavESP8266GCS::_readMessage()
                     if(!_heard_from) {
                         if(_message.msgid == MAVLINK_MSG_ID_HEARTBEAT) {
                             //-- We no longer need DHCP
-                            if(getWorld()->getParameters()->getWifiMode() == WIFI_MODE_AP) {
-                                wifi_softap_dhcps_stop();
+                            if(getWorld()->getParameters()->getWifiMode() == MAVESP8266_WIFI_MODE_AP) {
+                                stop_dhcp_server();
                             }
                             _heard_from      = true;
                             _system_id       = _message.sysid;
@@ -174,8 +185,8 @@ MavESP8266GCS::_readMessage()
     if(!msgReceived) {
         if(_heard_from && (millis() - _last_heartbeat) > HEARTBEAT_TIMEOUT) {
             //-- Restart DHCP and start broadcasting again
-            if(getWorld()->getParameters()->getWifiMode() == WIFI_MODE_AP) {
-                wifi_softap_dhcps_start();
+            if(getWorld()->getParameters()->getWifiMode() == MAVESP8266_WIFI_MODE_AP) {
+                start_dhcp_server();
             }
             _heard_from = false;
             _ip[3] = 255;
@@ -239,8 +250,8 @@ MavESP8266GCS::_sendRadioStatus()
     uint8_t lostVehicleMessages = 100;
     uint8_t lostGcsMessages = 100;
 
-    if(wifi_get_opmode() == STATION_MODE) {
-        rssi = (uint8_t)wifi_station_get_rssi();
+    if (WiFi.getMode() == WIFI_STA) {
+        rssi = (uint8_t)WiFi.RSSI();
     }
 
     if (st->packets_received > 0) {
@@ -303,3 +314,29 @@ void MavESP8266GCS::_send_pending(void)
         }
     }
 }
+
+//---------------------------------------------------------------------------------
+
+#if MAVESP8266_IS_ESP32
+
+#include <tcpip_adapter.h>
+
+static void start_dhcp_server() {
+    tcpip_adapter_dhcps_start(TCPIP_ADAPTER_IF_AP);
+}
+
+static void stop_dhcp_server() {
+    tcpip_adapter_dhcps_stop(TCPIP_ADAPTER_IF_AP);
+}
+
+#else
+
+static void start_dhcp_server() {
+    wifi_softap_dhcps_start();
+}
+
+static void stop_dhcp_server() {
+    wifi_softap_dhcps_stop();
+}
+
+#endif

@@ -43,7 +43,15 @@
 #include "mavesp8266_component.h"
 #include "mavesp8266_power_mgmt.h"
 
-#include <ESP8266mDNS.h>
+#if MAVESP8266_IS_ESP32
+#  include <WiFi.h>
+#endif
+
+#if MAVESP8266_IS_ESP32
+#  include <ESPmDNS.h>
+#else
+#  include <ESP8266mDNS.h>
+#endif
 
 #define GPIO02  2
 
@@ -124,7 +132,7 @@ void wait_for_client() {
 #ifdef ENABLE_DEBUG
     int wcount = 0;
 #endif
-    uint8 client_count = wifi_softap_get_station_num();
+    uint8_t client_count = WiFi.softAPgetStationNum();
     while (!client_count) {
 #ifdef ENABLE_DEBUG
         Serial1.print(".");
@@ -134,7 +142,7 @@ void wait_for_client() {
         }
 #endif
         delay(1000);
-        client_count = wifi_softap_get_station_num();
+        client_count = WiFi.softAPgetStationNum();
     }
     DEBUG_LOG("Got %d client(s)\n", client_count);
 }
@@ -144,7 +152,7 @@ void wait_for_client() {
 void reset_interrupt(){
     Parameters.resetToDefaults();
     Parameters.saveAllToEeprom();
-    ESP.reset();
+    ESP.restart();
 }
 
 //---------------------------------------------------------------------------------
@@ -180,10 +188,10 @@ void setup() {
 
     WiFi.disconnect(true);
 
-    if(Parameters.getWifiMode() == WIFI_MODE_STA){
+    if(Parameters.getWifiMode() == MAVESP8266_WIFI_MODE_STA){
         //-- Connect to an existing network
         WiFi.mode(WIFI_STA);
-        WiFi.config(Parameters.getWifiStaIP(), Parameters.getWifiStaGateway(), Parameters.getWifiStaSubnet(), 0U, 0U);
+        WiFi.config(Parameters.getWifiStaIP(), Parameters.getWifiStaGateway(), Parameters.getWifiStaSubnet(), IPAddress((uint32_t)0), IPAddress((uint32_t)0));
         WiFi.begin(Parameters.getWifiStaSsid(), Parameters.getWifiStaPassword());
 
         //-- Wait a minute to connect
@@ -199,25 +207,37 @@ void setup() {
         } else {
             //-- Fall back to AP mode if no connection could be established
             WiFi.disconnect(true);
-            Parameters.setWifiMode(WIFI_MODE_AP);
+            Parameters.setWifiMode(MAVESP8266_WIFI_MODE_AP);
         }
     }
 
-    if(Parameters.getWifiMode() == WIFI_MODE_AP){
+    if(Parameters.getWifiMode() == MAVESP8266_WIFI_MODE_AP){
         //-- Start AP
         WiFi.mode(WIFI_AP);
+#if MAVESP8266_IS_ESP32
+        WiFi.encryptionType(WIFI_AUTH_WPA2_PSK);
+#else
         WiFi.encryptionType(AUTH_WPA2_PSK);
+#endif
         WiFi.softAP(Parameters.getWifiSsid(), Parameters.getWifiPassword(), Parameters.getWifiChannel());
         localIP = WiFi.softAPIP();
         wait_for_client();
     }
 
     //-- Boost power to Max
+#if MAVESP8266_IS_ESP32
+    WiFi.setTxPower(WIFI_POWER_19_5dBm);
+#else
     WiFi.setOutputPower(20.5);
+#endif
     //-- MDNS
-    char mdsnName[256];
-    sprintf(mdsnName, "MavEsp8266-%d",localIP[3]);
-    MDNS.begin(mdsnName);
+    char mdnsName[256];
+#if MAVESP8266_IS_ESP32
+    sprintf(mdnsName, "MavEsp32-%d",localIP[3]);
+#else
+    sprintf(mdnsName, "MavEsp8266-%d",localIP[3]);
+#endif
+    MDNS.begin(mdnsName);
     MDNS.addService("http", "tcp", 80);
     //-- Initialize Comm Links
     DEBUG_LOG("Start WiFi Bridge\n");
