@@ -384,6 +384,7 @@ MavESP8266Component::_handleCmdLongForFC(MavESP8266Bridge* sender, mavlink_comma
             } else {
                 result = MAV_RESULT_FAILED;
             }
+            break;
 
         case 127:
             // The secret sauce: our own command code to request a drone to turn
