@@ -117,7 +117,6 @@ const char* kFlashMaps[7] = {
 #define xstr(s) str(s)
 #define GIT_VERSION_STRING xstr(PIO_SRC_REV)
 #define BUILD_DATE_STRING xstr(PIO_BUILD_DATE)
-#define BUILD_TIME_STRING xstr(PIO_BUILD_TIME)
 #define BOARD_STRING xstr(PIO_BOARD)
 
 static uint32_t flash = 0;
@@ -270,8 +269,6 @@ static void handle_root()
     message += "</dd><dt>\n";
     message += "Build Date</dt><dd>";
     message += BUILD_DATE_STRING;
-    message += " ";
-    message += BUILD_TIME_STRING;
     message += "</dd><dt>\n";
     message += "Board</dt><dd>";
     message += BOARD_STRING;
