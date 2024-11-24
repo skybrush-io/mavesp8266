@@ -158,8 +158,11 @@ void setup() {
     Serial1.begin(115200);
 #else
     //-- Initialized GPIO02 (Used for "Reset To Factory")
-    pinMode(GPIO02, INPUT_PULLUP);
-    attachInterrupt(GPIO02, reset_interrupt, FALLING);
+    // This seems to cause a reset loop at boot time with the Adafruit HUZZAH
+    // ESP8266 so it is now disabled.
+    //
+    // pinMode(GPIO02, INPUT_PULLUP);
+    // attachInterrupt(digitalPinToInterrupt(GPIO02), reset_interrupt, FALLING);
 #endif
     Logger.begin(2048);
 
