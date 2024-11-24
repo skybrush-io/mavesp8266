@@ -161,7 +161,7 @@ MavESP8266Vehicle::isArmed()
 bool
 MavESP8266Vehicle::_readMessage()
 {
-    bool msgReceived = false;
+    uint8_t msgReceived = MAVLINK_FRAMING_INCOMPLETE;
     int16_t avail = Serial.available();
     if (avail <= 0 && _non_mavlink_len != 0 && _rxstatus.parse_state <= MAVLINK_PARSE_STATE_IDLE) {
         // flush out the non-mavlink buffer when there is nothing pending. This
@@ -185,7 +185,7 @@ MavESP8266Vehicle::_readMessage()
             if (last_parse_error != _rxstatus.parse_error) {
                 _status.parse_errors++;
             }
-            if(msgReceived) {
+            if (msgReceived != MAVLINK_FRAMING_INCOMPLETE) {
                 _status.packets_received++;
                 //-- Is this the first packet we got?
                 if(!_heard_from) {

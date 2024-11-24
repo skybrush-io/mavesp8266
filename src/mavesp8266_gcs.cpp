@@ -91,7 +91,7 @@ MavESP8266GCS::readMessage()
 bool
 MavESP8266GCS::_readMessage()
 {
-    bool msgReceived = false;
+    uint8_t msgReceived = MAVLINK_FRAMING_INCOMPLETE;
     int udp_count = _udp.parsePacket();
     if (udp_count <= 0 && _non_mavlink_len != 0 && _rxstatus.parse_state <= MAVLINK_PARSE_STATE_IDLE) {
         // flush out the non-mavlink buffer when there is nothing pending. This
@@ -117,7 +117,7 @@ MavESP8266GCS::_readMessage()
                 if (last_parse_error != _rxstatus.parse_error) {
                     _status.parse_errors++;                
                 }
-                if(msgReceived) {
+                if (msgReceived != MAVLINK_FRAMING_INCOMPLETE) {
                     //-- We no longer need to broadcast
                     _status.packets_received++;
                     if(_ip[3] == 255) {
