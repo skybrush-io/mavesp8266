@@ -89,6 +89,7 @@ private:
 
 //-- Singletons
 IPAddress               localIP;
+IPAddress               subnetMask;
 MavESP8266Component     Component;
 MavESP8266Parameters    Parameters;
 MavESP8266GCS           GCS;
@@ -198,6 +199,7 @@ void setup() {
         }
         if(WiFi.status() == WL_CONNECTED) {
             localIP = WiFi.localIP();
+            subnetMask = WiFi.subnetMask();
             WiFi.setAutoReconnect(true);
         } else {
             //-- Fall back to AP mode if no connection could be established
@@ -212,26 +214,35 @@ void setup() {
         WiFi.encryptionType(AUTH_WPA2_PSK);
         WiFi.softAP(Parameters.getWifiSsid(), Parameters.getWifiPassword(), Parameters.getWifiChannel());
         localIP = WiFi.softAPIP();
+        subnetMask = IPAddress(255, 255, 255, 0);
         wait_for_client();
     }
 
     //-- Boost power to Max
     WiFi.setOutputPower(20.5);
+
     //-- MDNS
-    char mdsnName[256];
-    sprintf(mdsnName, "MavEsp8266-%d",localIP[3]);
-    MDNS.begin(mdsnName);
+    char mdnsName[256];
+    sprintf(mdnsName, "MavEsp8266-%d",localIP[3]);
+    MDNS.begin(mdnsName);
     MDNS.addService("http", "tcp", 80);
+
     //-- Initialize Comm Links
     DEBUG_LOG("Start WiFi Bridge\n");
     DEBUG_LOG("Local IP: %s\n", localIP.toString().c_str());
 
     Parameters.setLocalIPAddress(localIP);
+
+    //-- Start broadcasting first and switch to the GCS IP once we get it.
     IPAddress gcs_ip(localIP);
-    //-- I'm getting bogus IP from the DHCP server. Broadcasting for now.
-    gcs_ip[3] = 255;
+    for (int i = 0; i < 4; i++) {
+        gcs_ip[i] = (gcs_ip[i] & subnetMask[i]) | (0xFF & ~subnetMask[i]);
+    }
     GCS.begin(&Vehicle, gcs_ip);
+
+    //-- Assume that the last byte of the IP address is the MAVLink system ID
     Vehicle.begin(&GCS, localIP[3]);
+
     //-- Initialize Update Server
     updateServer.begin(&updateStatus);
 }
