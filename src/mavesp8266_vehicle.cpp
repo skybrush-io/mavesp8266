@@ -259,9 +259,6 @@ void
 MavESP8266Vehicle::_generateFakeHeartbeat()
 {
     mavlink_message_t msg;
-	mavlink_status_t *status;
-    char* buf;
-	uint8_t header[10];
 
     if (_system_id == 0)
     {
@@ -271,60 +268,25 @@ MavESP8266Vehicle::_generateFakeHeartbeat()
         return;
     }
 
-    // This is a horrible hack here. We cannot use mavlink_msg_heartbeat_pack_chan()
-    // for some reason to prepare a "proper" MAVLink message, because if we do
-    // then the log downloads suddenly start to slow down. I have no idea why.
-    // Luckily the heartbeat packet is simple enough so we can construct it
-    // manually.
-    buf = _MAV_PAYLOAD_NON_CONST(&msg);
-
-    // Order of encoded fields is:
-    // 1) Custom mode
-    buf[0] = 0; buf[1] = 0; buf[2] = 0; buf[3] = 0;
-    // 2) type
-    buf[4] = mavlink_msg_heartbeat_get_type(&_last_heartbeat_msg);
-    // 3) autopilot
-    buf[5] = mavlink_msg_heartbeat_get_autopilot(&_last_heartbeat_msg);
-    // 4) base mode
-    buf[6] = 0;
-    // 5) system status
-    buf[7] = MAV_STATE_FLIGHT_TERMINATION;
-    // 6) MAVLink version (yes, 3 is correct)
-    buf[8] = 3;
-
-    // Prepare message header
-    msg.magic = 0xfd;
-    msg.incompat_flags = 0;
-    msg.compat_flags = 0;
-    msg.sysid = _system_id > 0 ? _system_id : 1;
-    msg.compid = _component_id > 0 ? _component_id : 1;
-    msg.msgid = MAVLINK_MSG_ID_HEARTBEAT;
-    msg.len = MAVLINK_MSG_ID_HEARTBEAT_LEN;
-
-    // Handle sequence number
-    status = mavlink_get_channel_status(this->_send_chan);
-    msg.seq = status->current_tx_seq;
-	status->current_tx_seq = status->current_tx_seq + 1;
-
-	// form the header as a byte array for the crc
-	header[0] = msg.magic;
-	header[1] = msg.len;
-    header[2] = msg.incompat_flags;
-    header[3] = msg.compat_flags;
-    header[4] = msg.seq;
-    header[5] = msg.sysid;
-    header[6] = msg.compid;
-    header[7] = msg.msgid & 0xFF;
-    header[8] = (msg.msgid >> 8) & 0xFF;
-    header[9] = (msg.msgid >> 16) & 0xFF;
-
-    // Calculate the CRC
-	uint16_t checksum = crc_calculate(&header[1], 9);
-	crc_accumulate_buffer(&checksum, buf, msg.len);
-	crc_accumulate(MAVLINK_MSG_ID_HEARTBEAT_CRC, &checksum);
-    buf[9] = (uint8_t)(checksum & 0xFF);
-    buf[10] = (uint8_t)(checksum >> 8);
-	msg.checksum = checksum;
+    // Generation with mavlink_msg_heartbeat_pack_chan() seems to work with a
+    // recent espressif8266 SDK, but it had problems with older versions (~v2)
+    // such that even its _inclusion_ caused packet losses during log downloads,
+    // even if the execution never reached this part of the code. I don't know
+    // the reason for this. Updating to espressif8266@^4 solved the issue. For
+    // posterity, look in the git history of this file for a manual generation
+    // of heartbeats (not using mavlink_msg_heartbeat_pack_chan()) should the
+    // issue resurface.
+    mavlink_msg_heartbeat_pack_chan(
+        _system_id,
+        _component_id != 0 ? _component_id : 1,
+        _forwardTo->_send_chan,
+        &msg,
+        mavlink_msg_heartbeat_get_type(&_last_heartbeat_msg),
+        mavlink_msg_heartbeat_get_autopilot(&_last_heartbeat_msg),
+        0,
+        0,
+        MAV_STATE_FLIGHT_TERMINATION
+    );
 
     // Now we can send the message
     _forwardTo->sendMessage(&msg);
