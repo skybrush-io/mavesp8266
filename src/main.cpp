@@ -234,14 +234,14 @@ void setup() {
     Parameters.setLocalIPAddress(localIP);
 
     //-- Start broadcasting first and switch to the GCS IP once we get it.
-    IPAddress gcs_ip(localIP);
+    IPAddress gcsIP(localIP);
     for (int i = 0; i < 4; i++) {
-        gcs_ip[i] = (gcs_ip[i] & subnetMask[i]) | (0xFF & ~subnetMask[i]);
+        gcsIP[i] = (gcsIP[i] & subnetMask[i]) | (0xFF & ~subnetMask[i]);
     }
-    GCS.begin(&Vehicle, gcs_ip);
+    GCS.begin(&Vehicle, gcsIP);
 
     //-- Assume that the last byte of the IP address is the MAVLink system ID
-    Vehicle.begin(&GCS, localIP[3]);
+    Vehicle.begin(&GCS, localIP, localIP[3]);
 
     //-- Initialize Update Server
     updateServer.begin(&updateStatus);

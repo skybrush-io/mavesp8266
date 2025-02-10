@@ -52,8 +52,9 @@ MavESP8266Vehicle::MavESP8266Vehicle()
 //---------------------------------------------------------------------------------
 //-- Initialize
 void
-MavESP8266Vehicle::begin(MavESP8266Bridge* forwardTo, uint8_t system_id, uint8_t component_id)
+MavESP8266Vehicle::begin(MavESP8266Bridge* forwardTo, IPAddress ownIP, uint8_t system_id, uint8_t component_id)
 {
+    _ip = ownIP;
     _system_id = system_id;
     _component_id = component_id;
 

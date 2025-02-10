@@ -48,6 +48,7 @@ public:
     MavESP8266GCS();
 
     void    begin                   (MavESP8266Bridge* forwardTo, IPAddress broadcastIP);
+    IPAddress getIPAddress          () { return _ip; }
     void    readMessage             ();
     void    readMessageRaw          ();
     int     sendMessage             (mavlink_message_t* message);

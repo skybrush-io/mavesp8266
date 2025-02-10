@@ -44,7 +44,8 @@ class MavESP8266Vehicle : public MavESP8266Bridge {
 public:
     MavESP8266Vehicle();
 
-    void    begin           (MavESP8266Bridge* forwardTo, uint8_t system_id = 0, uint8_t component_id = 0);
+    void    begin           (MavESP8266Bridge* forwardTo, IPAddress ownIP, uint8_t system_id = 0, uint8_t component_id = 0);
+    IPAddress getIPAddress          () { return _ip; }
     void    readMessage     ();
     void    readMessageRaw  ();
     int     sendMessage     (mavlink_message_t* message);
@@ -58,6 +59,7 @@ private:
     void    _send_pending();
 
 private:
+    IPAddress               _ip;
     bool                    _armed;
     unsigned long           _queue_time;
     mavlink_message_t       _msg;
