@@ -191,7 +191,7 @@ void setup() {
         WiFi.begin(Parameters.getWifiStaSsid(), Parameters.getWifiStaPassword());
 
         //-- Wait a minute to connect
-        for(int i = 0; i < 120 && WiFi.status() != WL_CONNECTED; i++) {
+        for(int i = 0; i < 2 * WIFI_CLIENT_TIMEOUT && WiFi.status() != WL_CONNECTED; i++) {
             #ifdef ENABLE_DEBUG
             Serial.print(".");
             #endif

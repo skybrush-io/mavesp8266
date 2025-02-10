@@ -37,16 +37,30 @@
 
 #include <Arduino.h>
 #include <EEPROM.h>
-#include "mavesp8266.h"
+#include <ESP8266WiFi.h>
+#include "mavesp8266_config.h"
 #include "mavesp8266_parameters.h"
 #include "crc.h"
 
-const char* kDEFAULT_SSID       = "ArduPilot";
-const char* kDEFAULT_PASSWORD   = "ardupilot";
+#define str(s) #s
+#define xstr(s) str(s)
+
+const char* kDEFAULT_AP_SSID         = CONFIG_DEFAULT_WIFI_AP_SSID;
+const char* kDEFAULT_AP_PASSWORD     = CONFIG_DEFAULT_WIFI_AP_PASSWORD;
+const char* kDEFAULT_CLIENT_SSID     = CONFIG_DEFAULT_WIFI_CLIENT_SSID;
+const char* kDEFAULT_CLIENT_PASSWORD = CONFIG_DEFAULT_WIFI_CLIENT_PASSWORD;
+
+static void postprocessWifiSSID(char* ssid);
 
 //-- Reserved space for EEPROM persistence. A change in this will cause all values to reset to defaults.
 #define EEPROM_SPACE            32 * sizeof(uint32_t)
 #define EEPROM_CRC_ADD          EEPROM_SPACE - (sizeof(uint32_t) << 1)
+
+//-- Maximum length of the SSID plus one
+#define SSID_BUF_LENGTH 16
+
+//-- Maximum length of wifi passwords plis one
+#define PASSWORD_BUF_LENGTH 16
 
 uint32_t    _sw_version;
 int8_t      _debug_enabled;
@@ -55,10 +69,10 @@ uint32_t    _wifi_channel;
 uint16_t    _wifi_udp_hport;
 uint16_t    _wifi_udp_cport;
 uint32_t    _wifi_ip_address;
-char        _wifi_ssid[16];
-char        _wifi_password[16];
-char        _wifi_ssidsta[16];
-char        _wifi_passwordsta[16];
+char        _wifi_ssid[SSID_BUF_LENGTH];
+char        _wifi_password[PASSWORD_BUF_LENGTH];
+char        _wifi_ssidsta[SSID_BUF_LENGTH];
+char        _wifi_passwordsta[PASSWORD_BUF_LENGTH];
 uint32_t    _wifi_ipsta;
 uint32_t    _wifi_gatewaysta;
 uint32_t    _wifi_subnetsta;
@@ -170,10 +184,14 @@ MavESP8266Parameters::resetToDefaults()
     _wifi_ipsta        = 0;
     _wifi_gatewaysta   = 0;
     _wifi_subnetsta    = 0;
-    strncpy(_wifi_ssid,         kDEFAULT_SSID,      sizeof(_wifi_ssid));
-    strncpy(_wifi_password,     kDEFAULT_PASSWORD,  sizeof(_wifi_password));
-    strncpy(_wifi_ssidsta,      kDEFAULT_SSID,      sizeof(_wifi_ssidsta));
-    strncpy(_wifi_passwordsta,  kDEFAULT_PASSWORD,  sizeof(_wifi_passwordsta));
+    strncpy(_wifi_ssid,         kDEFAULT_AP_SSID,          sizeof(_wifi_ssid));
+    strncpy(_wifi_password,     kDEFAULT_AP_PASSWORD,      sizeof(_wifi_password));
+    strncpy(_wifi_ssidsta,      kDEFAULT_CLIENT_SSID,      sizeof(_wifi_ssidsta));
+    strncpy(_wifi_passwordsta,  kDEFAULT_CLIENT_PASSWORD,  sizeof(_wifi_passwordsta));
+
+    postprocessWifiSSID(_wifi_ssid);
+    postprocessWifiSSID(_wifi_ssidsta);
+
     _flash_left = ESP.getFreeSketchSpace();
 }
 
@@ -411,4 +429,23 @@ void
 MavESP8266Parameters::setUartBaudRate(uint32_t baud)
 {
     _uart_baud_rate = baud;
+}
+
+//---------------------------------------------------------------------------------
+static void postprocessWifiSSID(char* ssid)
+{
+    // Replaces {id} in the SSID with a hexadecimal representation of the
+    // last three bytes of the MAC address
+    char* token_start = strstr(ssid, "{id}");
+    if (token_start) {
+        int pos = token_start - ssid;
+        String mac = WiFi.macAddress();
+        String newSSID = String(ssid).substring(0, pos)
+            + mac.substring(9, 11)
+            + mac.substring(12, 14)
+            + mac.substring(15, 17)
+            + String(ssid).substring(pos + 4);
+        memcpy(ssid, newSSID.c_str(), SSID_BUF_LENGTH);
+        ssid[SSID_BUF_LENGTH - 1] = 0;
+    }
 }
