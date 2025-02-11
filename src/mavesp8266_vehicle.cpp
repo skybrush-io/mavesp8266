@@ -52,8 +52,9 @@ MavESP8266Vehicle::MavESP8266Vehicle()
 //---------------------------------------------------------------------------------
 //-- Initialize
 void
-MavESP8266Vehicle::begin(MavESP8266Bridge* forwardTo, uint8_t system_id, uint8_t component_id)
+MavESP8266Vehicle::begin(MavESP8266Bridge* forwardTo, IPAddress ownIP, uint8_t system_id, uint8_t component_id)
 {
+    _ip = ownIP;
     _system_id = system_id;
     _component_id = component_id;
 
@@ -161,7 +162,7 @@ MavESP8266Vehicle::isArmed()
 bool
 MavESP8266Vehicle::_readMessage()
 {
-    bool msgReceived = false;
+    uint8_t msgReceived = MAVLINK_FRAMING_INCOMPLETE;
     int16_t avail = Serial.available();
     if (avail <= 0 && _non_mavlink_len != 0 && _rxstatus.parse_state <= MAVLINK_PARSE_STATE_IDLE) {
         // flush out the non-mavlink buffer when there is nothing pending. This
@@ -185,7 +186,7 @@ MavESP8266Vehicle::_readMessage()
             if (last_parse_error != _rxstatus.parse_error) {
                 _status.parse_errors++;
             }
-            if(msgReceived) {
+            if (msgReceived != MAVLINK_FRAMING_INCOMPLETE) {
                 _status.packets_received++;
                 //-- Is this the first packet we got?
                 if(!_heard_from) {
@@ -268,10 +269,17 @@ MavESP8266Vehicle::_generateFakeHeartbeat()
         return;
     }
 
-    //-- Build message
+    // Generation with mavlink_msg_heartbeat_pack_chan() seems to work with a
+    // recent espressif8266 SDK, but it had problems with older versions (~v2)
+    // such that even its _inclusion_ caused packet losses during log downloads,
+    // even if the execution never reached this part of the code. I don't know
+    // the reason for this. Updating to espressif8266@^4 solved the issue. For
+    // posterity, look in the git history of this file for a manual generation
+    // of heartbeats (not using mavlink_msg_heartbeat_pack_chan()) should the
+    // issue resurface.
     mavlink_msg_heartbeat_pack_chan(
-        _system_id > 0 ? _system_id : 1,
-        _component_id > 0 ? _component_id : 1,
+        _system_id,
+        _component_id != 0 ? _component_id : 1,
         _forwardTo->_send_chan,
         &msg,
         mavlink_msg_heartbeat_get_type(&_last_heartbeat_msg),
@@ -281,5 +289,6 @@ MavESP8266Vehicle::_generateFakeHeartbeat()
         MAV_STATE_FLIGHT_TERMINATION
     );
 
+    // Now we can send the message
     _forwardTo->sendMessage(&msg);
 }

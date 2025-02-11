@@ -1,0 +1,153 @@
+config DEFAULT_UART_SPEED
+    int "Default UART speed"
+    default 921600
+    range 9600 921600
+    help
+      Default baud rate of the UART leading to the flight controller
+
+config HEARTBEAT_TIMEOUT
+    int "MAVLink heartbeat timeout (msec)"
+    default 10000
+    help
+      Number of milliseconds that must pass without receiving a heartbeat from
+      the GCS to consider it disconnected
+
+menu "Wifi configuration"
+
+choice
+    prompt "Wifi mode"
+    default WIFI_MODE_AP
+
+config WIFI_MODE_AP
+    bool "Access point"
+    help
+      The device creates its own access point and the GCS connects to it
+
+config WIFI_MODE_CLIENT
+    bool "Client"
+    help
+      The device connects to an existing access point
+
+endchoice
+
+config DEFAULT_WIFI_AP_CHANNEL
+    int "Default wifi AP channel"
+    default 11
+    range 1 14
+    help
+      Wifi channel to use when the device creates its own access point
+
+config DEFAULT_WIFI_AP_SSID
+    string "SSID (AP mode)"
+    default "Skybrush-{id}"
+    help
+      SSID of the wifi network to create when the device is in AP mode. Use
+      {id} to include the device's unique ID in the SSID
+
+config DEFAULT_WIFI_AP_PASSWORD
+    string "Password (AP mode)"
+    default "skybrush"
+    help
+      Password of the wifi network to create when the device is in AP mode
+
+config DEFAULT_WIFI_CLIENT_SSID
+    string "SSID (client mode)"
+    default "Skybrush"
+    help
+      SSID of the wifi network to connect to when the device is in client mode
+
+config DEFAULT_WIFI_CLIENT_PASSWORD
+    string "Password (client mode)"
+    default "skybrush"
+    help
+      Password of the wifi network to connect to when the device is in client
+      mode
+
+config WIFI_CLIENT_TIMEOUT
+    int "Timeout (client mode)"
+    default 60
+    range 1 65535
+    help
+      Number of seconds to wait for the access point before giving up and
+      creating an AP instead
+
+config DEFAULT_UDP_GCS_PORT
+    int "Default GCS UDP port"
+    default 14550
+    range 1 65535
+    help
+      UDP port where the GCS is listening for incoming MAVLink packets
+
+config DEFAULT_UDP_VEHICLE_PORT
+    int "Default vehicle UDP port"
+    default 14555
+    range 1 65535
+    help
+      UDP port where the vehicle is listening for packets from the GCS.
+      This port is also used for sending packets to the GCS.
+
+endmenu
+
+menu "Power management"
+
+config ENABLE_FC_POWER_MANAGEMENT
+    bool "Enable flight controller power management"
+    help
+      Include support for custom (Skybrush-specific) remote power management
+      commands.
+
+if ENABLE_FC_POWER_MANAGEMENT
+
+config FC_POWER_CONTROL_PIN
+    int "Power management control pin"
+    default 4
+    help
+      Index of the GPIO pin that controls whether the flight controller should
+      be powered or not
+
+config FC_POWER_CONTROL_PIN_PULSE_LENGTH_MSEC
+    int "Control pin pulse length"
+    range 0 10000
+    default 0
+    help
+      Length of the pulse on the power control pin of the flight controller if
+      the pin is emulating a button that _toggles_ power to the flight
+      controller. Set to zero if the power to the flight controller is
+      level-triggered.
+
+config FC_POWER_CONTROL_PIN_INVERTED
+    bool "Invert control pin"
+    help
+      Check this box if the power management control pin is active low (i.e.
+      provides power to the flight controller when it is set to logical low)
+
+config ENABLE_FC_POWER_QUERY_PIN
+    bool "Enable flight controller power query pin"
+    help
+      Include support for a GPIO pin that can be read to determine whether the
+      flight controller is currently powered or not
+
+config FC_POWER_QUERY_PIN
+    int "Power management query pin"
+    default 5
+    depends on ENABLE_FC_POWER_QUERY_PIN
+    help
+      Index of the GPIO pin that can be read to determine the current power
+      state of the flight controller
+
+config SIMULATE_HEARTBEATS_WHEN_POWERED_OFF
+    bool "Simulate heartbeats when powered off"
+    default y
+    help
+      Simulate MAVLink heartbeat packets from the flight controller when the
+      power is off to allow the GCS to detect the presence of the drone even
+      when the flight controller is off
+
+endif
+
+endmenu
+
+config ENABLE_DEBUG
+    bool "Enable debug messages"
+    help
+      Enables debug messages on the secondary serial port

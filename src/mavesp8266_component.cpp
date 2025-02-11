@@ -154,7 +154,9 @@ MavESP8266Component::_sendStatusMessage(MavESP8266Bridge* sender, uint8_t type, 
         sender->_send_chan,
         &msg,
         type,
-        text
+        text,
+        0,
+        0
     );
     sender->sendMessage(&msg);
 }
@@ -323,15 +325,15 @@ MavESP8266Component::_handleCmdLong(MavESP8266Bridge* sender, mavlink_command_lo
 bool
 MavESP8266Component::_handleCmdLongForFC(MavESP8266Bridge* sender, mavlink_command_long_t* cmd, uint8_t compID)
 {
-    uint8_t result = MAV_RESULT_UNSUPPORTED;
-    MavESP8266PowerMgmt* power = getWorld()->getPowerMgmt();
-    bool isPoweredOn = power->isPowerOn(getWorld()->getVehicle()->heardFrom());
-
     // We only handle MAV_CMD_PREFLIGHT_REBOOT_SHUTDOWN messages on behalf
     // of the FC.
     if(cmd->command != MAV_CMD_PREFLIGHT_REBOOT_SHUTDOWN) {
         return false;
     }
+
+    uint8_t result = MAV_RESULT_UNSUPPORTED;
+    MavESP8266PowerMgmt* power = getWorld()->getPowerMgmt();
+    bool isPoweredOn = power->isPowerOn(getWorld()->getVehicle()->heardFrom());
 
     switch (static_cast<uint8_t>(cmd->param1)) {
         case 0:

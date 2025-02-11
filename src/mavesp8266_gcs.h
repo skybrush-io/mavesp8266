@@ -47,7 +47,8 @@ class MavESP8266GCS : public MavESP8266Bridge {
 public:
     MavESP8266GCS();
 
-    void    begin                   (MavESP8266Bridge* forwardTo, IPAddress gcsIP);
+    void    begin                   (MavESP8266Bridge* forwardTo, IPAddress broadcastIP);
+    IPAddress getIPAddress          () { return _ip; }
     void    readMessage             ();
     void    readMessageRaw          ();
     int     sendMessage             (mavlink_message_t* message);
@@ -64,6 +65,7 @@ private:
 
 private:
     WiFiUDP             _udp;
+    IPAddress           _broadcast_ip;
     IPAddress           _ip;
     uint16_t            _udp_port;
     mavlink_message_t   _message;

@@ -1,3 +1,6 @@
 [submodule "lib/mavlink"]
 	path = lib/mavlink
 	url = https://github.com/mavlink/c_library_v2.git
+[submodule "lib/kconfig"]
+	path = lib/kconfig
+	url = https://github.com/ulfalizer/Kconfiglib/

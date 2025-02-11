@@ -38,15 +38,7 @@
 #ifndef MAVESP8266_PARAMETERS_H
 #define MAVESP8266_PARAMETERS_H
 
-#define MAVESP8266_WIFI_MODE_AP 0
-#define MAVESP8266_WIFI_MODE_STA 1
-
-//-- Constants
-#define DEFAULT_WIFI_MODE       MAVESP8266_WIFI_MODE_AP
-#define DEFAULT_UART_SPEED      921600
-#define DEFAULT_WIFI_CHANNEL    11
-#define DEFAULT_UDP_HPORT       14550
-#define DEFAULT_UDP_CPORT       14555
+#include <ardupilotmega/mavlink.h>
 
 struct stMavEspParameters {
     char        id[MAVLINK_MSG_PARAM_VALUE_FIELD_PARAM_ID_LEN];

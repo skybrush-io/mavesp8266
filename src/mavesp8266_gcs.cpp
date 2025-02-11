@@ -63,12 +63,17 @@ MavESP8266GCS::MavESP8266GCS()
 //---------------------------------------------------------------------------------
 //-- Initialize
 void
-MavESP8266GCS::begin(MavESP8266Bridge* forwardTo, IPAddress gcsIP)
+MavESP8266GCS::begin(MavESP8266Bridge* forwardTo, IPAddress broadcastIP)
 {
     MavESP8266Bridge::begin(forwardTo);
-    _ip = gcsIP;
+
+    //-- Start broadcasting to the given IP and wait for the GCS heartbeat
+    _broadcast_ip = broadcastIP;
+    _ip = broadcastIP;
+
     //-- Init variables that shouldn't change unless we reboot
     _udp_port = getWorld()->getParameters()->getWifiUdpHport();
+
     //-- Start UDP
     _udp.begin(getWorld()->getParameters()->getWifiUdpCport());
 }
@@ -102,7 +107,7 @@ MavESP8266GCS::readMessage()
 bool
 MavESP8266GCS::_readMessage()
 {
-    bool msgReceived = false;
+    uint8_t msgReceived = MAVLINK_FRAMING_INCOMPLETE;
     int udp_count = _udp.parsePacket();
     if (udp_count <= 0 && _non_mavlink_len != 0 && _rxstatus.parse_state <= MAVLINK_PARSE_STATE_IDLE) {
         // flush out the non-mavlink buffer when there is nothing pending. This
@@ -128,10 +133,10 @@ MavESP8266GCS::_readMessage()
                 if (last_parse_error != _rxstatus.parse_error) {
                     _status.parse_errors++;                
                 }
-                if(msgReceived) {
+                if (msgReceived != MAVLINK_FRAMING_INCOMPLETE) {
                     //-- We no longer need to broadcast
                     _status.packets_received++;
-                    if(_ip[3] == 255) {
+                    if(_ip == _broadcast_ip) {
                         _ip = _udp.remoteIP();
                         getWorld()->getLogger()->log("Response from GCS. Setting GCS IP to: %s\n", _ip.toString().c_str());
                     }
@@ -189,7 +194,7 @@ MavESP8266GCS::_readMessage()
                 start_dhcp_server();
             }
             _heard_from = false;
-            _ip[3] = 255;
+            _ip = _broadcast_ip;
             getWorld()->getLogger()->log("Heartbeat timeout from GCS\n");
         }
     }

@@ -6,4 +6,7 @@ tests
 research
 .pio
 .vscode
-ubuntu-bionic-18.04-cloudimg-console.log
+.config
+.config.old
+etc/conf/vendor/*
+

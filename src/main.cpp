@@ -97,6 +97,7 @@ private:
 
 //-- Singletons
 IPAddress               localIP;
+IPAddress               subnetMask;
 MavESP8266Component     Component;
 MavESP8266Parameters    Parameters;
 MavESP8266GCS           GCS;
@@ -166,8 +167,11 @@ void setup() {
     Serial1.begin(115200);
 #else
     //-- Initialized GPIO02 (Used for "Reset To Factory")
-    pinMode(GPIO02, INPUT_PULLUP);
-    attachInterrupt(GPIO02, reset_interrupt, FALLING);
+    // This seems to cause a reset loop at boot time with the Adafruit HUZZAH
+    // ESP8266 so it is now disabled.
+    //
+    // pinMode(GPIO02, INPUT_PULLUP);
+    // attachInterrupt(digitalPinToInterrupt(GPIO02), reset_interrupt, FALLING);
 #endif
     Logger.begin(2048);
 
@@ -188,14 +192,14 @@ void setup() {
 
     WiFi.disconnect(true);
 
-    if(Parameters.getWifiMode() == MAVESP8266_WIFI_MODE_STA){
+    if(Parameters.getWifiMode() == MAVESP8266_WIFI_MODE_CLIENT){
         //-- Connect to an existing network
         WiFi.mode(WIFI_STA);
         WiFi.config(Parameters.getWifiStaIP(), Parameters.getWifiStaGateway(), Parameters.getWifiStaSubnet(), IPAddress((uint32_t)0), IPAddress((uint32_t)0));
         WiFi.begin(Parameters.getWifiStaSsid(), Parameters.getWifiStaPassword());
 
         //-- Wait a minute to connect
-        for(int i = 0; i < 120 && WiFi.status() != WL_CONNECTED; i++) {
+        for(int i = 0; i < 2 * WIFI_CLIENT_TIMEOUT && WiFi.status() != WL_CONNECTED; i++) {
             #ifdef ENABLE_DEBUG
             Serial.print(".");
             #endif
@@ -203,6 +207,7 @@ void setup() {
         }
         if(WiFi.status() == WL_CONNECTED) {
             localIP = WiFi.localIP();
+            subnetMask = WiFi.subnetMask();
             WiFi.setAutoReconnect(true);
         } else {
             //-- Fall back to AP mode if no connection could be established
@@ -221,6 +226,7 @@ void setup() {
 #endif
         WiFi.softAP(Parameters.getWifiSsid(), Parameters.getWifiPassword(), Parameters.getWifiChannel());
         localIP = WiFi.softAPIP();
+        subnetMask = IPAddress(255, 255, 255, 0);
         wait_for_client();
     }
 
@@ -230,6 +236,7 @@ void setup() {
 #else
     WiFi.setOutputPower(20.5);
 #endif
+
     //-- MDNS
     char mdnsName[256];
 #if MAVESP8266_IS_ESP32
@@ -239,16 +246,23 @@ void setup() {
 #endif
     MDNS.begin(mdnsName);
     MDNS.addService("http", "tcp", 80);
+
     //-- Initialize Comm Links
     DEBUG_LOG("Start WiFi Bridge\n");
     DEBUG_LOG("Local IP: %s\n", localIP.toString().c_str());
 
     Parameters.setLocalIPAddress(localIP);
-    IPAddress gcs_ip(localIP);
-    //-- I'm getting bogus IP from the DHCP server. Broadcasting for now.
-    gcs_ip[3] = 255;
-    GCS.begin(&Vehicle, gcs_ip);
-    Vehicle.begin(&GCS, localIP[3]);
+
+    //-- Start broadcasting first and switch to the GCS IP once we get it.
+    IPAddress gcsIP(localIP);
+    for (int i = 0; i < 4; i++) {
+        gcsIP[i] = (gcsIP[i] & subnetMask[i]) | (0xFF & ~subnetMask[i]);
+    }
+    GCS.begin(&Vehicle, gcsIP);
+
+    //-- Assume that the last byte of the IP address is the MAVLink system ID
+    Vehicle.begin(&GCS, localIP, localIP[3]);
+
     //-- Initialize Update Server
     updateServer.begin(&updateStatus);
 }
