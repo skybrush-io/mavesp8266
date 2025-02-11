@@ -668,16 +668,19 @@ void handle_setParameters()
         IPAddress ip;
         ip.fromString(webServer.arg(kIPSTA).c_str());
         getWorld()->getParameters()->setWifiStaIP(ip);
+        ok = true;
     }
     if(webServer.hasArg(kGATESTA)) {
         IPAddress ip;
         ip.fromString(webServer.arg(kGATESTA).c_str());
         getWorld()->getParameters()->setWifiStaGateway(ip);
+        ok = true;
     }
     if(webServer.hasArg(kSUBSTA)) {
         IPAddress ip;
         ip.fromString(webServer.arg(kSUBSTA).c_str());
         getWorld()->getParameters()->setWifiStaSubnet(ip);
+        ok = true;
     }
     if(webServer.hasArg(kCPORT)) {
         ok = true;
